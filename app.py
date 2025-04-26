@@ -4,8 +4,8 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from beets_utils import (
     get_library_items, get_item_details, execute_beets_command, 
     get_album_art, import_music, get_item_count, search_library,
-    get_albums, get_artists, check_beets_config, set_connection_mode,
-    get_connection_mode, set_remote_config
+    get_albums, get_artists, check_beets_config, 
+    read_beets_config, update_beets_config, get_beets_plugins, get_beets_info
 )
 
 # Set up logging
@@ -20,8 +20,15 @@ app.secret_key = os.environ.get("SESSION_SECRET", "default_beets_gui_secret")
 @app.route('/config')
 def config_view():
     """Render the configuration view."""
-    conn_info = get_connection_mode()
-    return render_template('config.html', connection_info=conn_info)
+    # Get beets configuration status and info
+    config_status = check_beets_config()
+    beets_info = get_beets_info()
+    plugins_info = get_beets_plugins()
+    
+    return render_template('config.html', 
+                          config_status=config_status,
+                          beets_info=beets_info,
+                          plugins_info=plugins_info)
 
 @app.route('/')
 def index():
@@ -150,46 +157,50 @@ def api_import():
         logger.error(f"Error importing music: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# Connection mode API endpoints
-@app.route('/api/connection/mode', methods=['GET'])
-def api_get_connection_mode():
-    """Get the current connection mode."""
+# Add new endpoints for beets configuration management
+@app.route('/api/beets/config', methods=['GET'])
+def api_get_beets_config():
+    """Get the beets configuration."""
     try:
-        mode_info = get_connection_mode()
-        return jsonify(mode_info)
+        config = read_beets_config()
+        return jsonify(config)
     except Exception as e:
-        logger.error(f"Error getting connection mode: {str(e)}")
+        logger.error(f"Error getting beets config: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/connection/mode', methods=['POST'])
-def api_set_connection_mode():
-    """Set the connection mode (local or remote)."""
-    data = request.get_json()
-    mode = data.get('mode', '')
-    
-    if not mode or mode not in ['local', 'remote']:
-        return jsonify({'error': 'Invalid mode. Must be "local" or "remote"'}), 400
-    
-    try:
-        result = set_connection_mode(mode)
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error setting connection mode: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/connection/remote', methods=['POST'])
-def api_set_remote_config():
-    """Set the remote connection configuration."""
+@app.route('/api/beets/config', methods=['POST'])
+def api_update_beets_config():
+    """Update the beets configuration."""
     data = request.get_json()
     
     if not data:
         return jsonify({'error': 'No configuration provided'}), 400
     
     try:
-        result = set_remote_config(data)
+        result = update_beets_config(data)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error setting remote config: {str(e)}")
+        logger.error(f"Error updating beets config: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/beets/plugins', methods=['GET'])
+def api_get_beets_plugins():
+    """Get list of available beets plugins."""
+    try:
+        plugins = get_beets_plugins()
+        return jsonify(plugins)
+    except Exception as e:
+        logger.error(f"Error getting beets plugins: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/beets/info', methods=['GET'])
+def api_get_beets_info():
+    """Get information about the beets installation."""
+    try:
+        info = get_beets_info()
+        return jsonify(info)
+    except Exception as e:
+        logger.error(f"Error getting beets info: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

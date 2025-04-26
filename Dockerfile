@@ -4,6 +4,14 @@ FROM python:3.11-slim
 # Set the working directory in the container
 WORKDIR /app
 
+# Install system dependencies for Beets plugins
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    mp3gain \
+    libchromaprint-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install pip-tools for compiling requirements
 RUN pip install --no-cache-dir pip-tools
 
@@ -18,21 +26,28 @@ RUN pip-compile pyproject.toml --output-file requirements.txt --no-header --stri
 # Use --no-cache-dir to reduce image size
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Always install beets
-RUN pip install --no-cache-dir beets
+# Always install beets with plugin dependencies
+RUN pip install --no-cache-dir beets \
+    pylast \
+    pyacoustid \
+    requests \
+    flask \
+    beautifulsoup4 \
+    discogs-client \
+    requests_oauthlib \
+    musicbrainzngs
 
 # Copy the rest of the application code
 COPY . /app
 
-# Make port 8000 available to the world outside this container (we'll map this later)
-# Defaulting to 8000, can be overridden in docker-compose
-EXPOSE 8000
+# Make port 8777 available to the world outside this container
+EXPOSE 8777
 
 # Define environment variables (can be overridden)
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=8000
+ENV FLASK_RUN_PORT=8777
 # BEETS_CONFIG_PATH, MUSIC_DIR, DOWNLOAD_DIR will be set via docker-compose
 
 # Run app.py when the container launches using gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8777", "main:app"] 

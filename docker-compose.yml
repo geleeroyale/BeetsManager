@@ -2,44 +2,18 @@ version: "3.8"
 
 services:
   beets-manager:
-    # Replace <your-github-username>/<your-repo-name> with your actual GitHub username and repository name
-    # The tag is specified by the IMAGE_TAG environment variable, defaulting to 'latest'
-    image: ghcr.io/${GH_USERNAME:-your-github-username}/${GH_REPONAME:-your-repo-name}:${IMAGE_TAG:-latest}
+    image: ghcr.io/geleeroyale/beetsmanager-latest
     container_name: beets-manager
     restart: unless-stopped
     ports:
-      # Map host port (left) to container port (right, defined by EXPOSE in Dockerfile and FLASK_RUN_PORT)
-      - "${APP_PORT:-5000}:8000"
+      - "${APP_PORT:-8777}:8000"
     volumes:
-      # Mount the beets configuration directory
-      # IMPORTANT: Replace /path/on/host/to/beets-config with the actual path on your host machine
-      - ${BEETS_CONFIG_DIR_HOST}:/root/.config/beets # Mounts to /root/.config/beets inside container
-      # Mount the music directory
-      # IMPORTANT: Replace /path/on/host/to/music with the actual path on your host machine
-      - ${MUSIC_DIR_HOST}:/music
-      # Mount the download directory
-      # IMPORTANT: Replace /path/on/host/to/downloads with the actual path on your host machine
-      - ${DOWNLOAD_DIR_HOST}:/downloads
-      # Mount the application code for development (optional, comment out for production)
-      # - .:/app
+      - ${BEETS_CONFIG_DIR_HOST:-./config}:/root/.config/beets
+      - ${MUSIC_DIR_HOST:-./music}:/music
+      - ${DOWNLOAD_DIR_HOST:-./downloads}:/downloads
     environment:
-      # Set the path for the beets config file inside the container
-      # This path corresponds to the volume mount above
-      BEETS_CONFIG_PATH: /root/.config/beets/config.yaml
-      # Pass the container paths as env vars (needed if beets is installed inside container)
-      MUSIC_DIRECTORY_CONTAINER: /music
-      DOWNLOAD_DIRECTORY_CONTAINER: /downloads
-      SESSION_SECRET: ${SESSION_SECRET:-you_should_change_this_secret}
-      # Flask specific environment variables (if needed, though defaults are set in Dockerfile)
-      # FLASK_APP: app.py
-      # FLASK_RUN_HOST: 0.0.0.0
-      # FLASK_RUN_PORT: 8000 # This is the internal port
-      # For development, enable debug mode (optional)
-      FLASK_DEBUG: ${FLASK_DEBUG:-0} # 0 for False, 1 for True
-    # Depending on your beets configuration, you might need network access
-    # networks:
-    #  - some_network # Define networks at the bottom if needed
-# Optional: Define networks if needed
-# networks:
-#   some_network:
-#     driver: bridge
+      - BEETS_CONFIG_PATH=/root/.config/beets/config.yaml
+      - MUSIC_DIRECTORY_CONTAINER=/music
+      - DOWNLOAD_DIRECTORY_CONTAINER=/downloads
+      - FLASK_DEBUG=${FLASK_DEBUG:-0}
+      - SESSION_SECRET=${SESSION_SECRET:-please_change_this_secret_key}
