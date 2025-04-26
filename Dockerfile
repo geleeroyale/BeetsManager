@@ -48,8 +48,11 @@ RUN which beet && echo "Beets found at: $(which beet)" && beet --version
 # Copy the rest of the application code
 COPY . /app
 
-# Make port 8777 available to the world outside this container
-EXPOSE 8777
+# Make our entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+# Make port 8000 available to the world outside this container
+EXPOSE 8000
 
 # Define environment variables (can be overridden)
 ENV FLASK_APP=app.py
@@ -57,5 +60,7 @@ ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=8000
 # BEETS_CONFIG_PATH, MUSIC_DIR, DOWNLOAD_DIR will be set via docker-compose
 
+# Use our entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
 # Run app.py when the container launches using gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"] 

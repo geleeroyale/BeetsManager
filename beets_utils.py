@@ -8,10 +8,28 @@ from pathlib import Path
 import json
 import yaml
 from flask import current_app, session
+import shutil
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Find the beet executable to ensure it's accessible
+BEET_EXECUTABLE = "beet"
+# Try to find the full path to beet
+beet_path = shutil.which("beet")
+if beet_path:
+    BEET_EXECUTABLE = beet_path
+    logger.info(f"Found beet executable at: {beet_path}")
+else:
+    # Look in common locations
+    for path in ["/usr/local/bin/beet", "/root/.local/bin/beet", "/usr/bin/beet"]:
+        if Path(path).exists():
+            BEET_EXECUTABLE = path
+            logger.info(f"Found beet executable at: {path}")
+            break
+    else:
+        logger.warning("Could not find beet executable in PATH. Using 'beet' and hoping it works.")
 
 # Define default paths relative to home if env vars are not set
 DEFAULT_BEETS_CONFIG_DIR = Path(os.path.expanduser("~")) / ".config" / "beets"
@@ -46,7 +64,7 @@ def check_beets_config():
     
     # Check if beets command is available
     try:
-        subprocess.run(["beet", "--version"], capture_output=True, text=True, check=True)
+        subprocess.run([BEET_EXECUTABLE, "--version"], capture_output=True, text=True, check=True)
         beets_installed = True
     except (subprocess.SubprocessError, FileNotFoundError):
         beets_installed = False
@@ -248,7 +266,7 @@ def get_album_art(item_id):
             return None
         
         # Get album art locally
-        cmd = ["beet", "albumart", "-o", "-", item.get('album')]
+        cmd = [BEET_EXECUTABLE, "albumart", "-o", "-", item.get('album')]
         
         # Try to be more specific if we have artist information
         if item.get('albumartist'):
@@ -274,7 +292,7 @@ def execute_beets_command(command):
         return "No command provided"
     
     # Execute command locally
-    cmd_parts = ["beet"] + command.split()
+    cmd_parts = [BEET_EXECUTABLE] + command.split()
     
     try:
         # Run the command
@@ -299,7 +317,7 @@ def import_music(path):
         return {"success": False, "message": f"Path does not exist: {path}"}
     
     # Prepare the import command
-    cmd = ["beet", "import", path]
+    cmd = [BEET_EXECUTABLE, "import", path]
     
     try:
         # Run the command - note that this might require user interaction
@@ -373,7 +391,7 @@ def deep_update(source, overrides):
 def get_beets_plugins():
     """Get a list of available beets plugins."""
     try:
-        result = subprocess.run(["beet", "pluginlist"], capture_output=True, text=True)
+        result = subprocess.run([BEET_EXECUTABLE, "pluginlist"], capture_output=True, text=True)
         if result.returncode != 0:
             return {"success": False, "error": result.stderr}
         
@@ -397,8 +415,8 @@ def get_beets_plugins():
 def get_beets_info():
     """Get information about the beets installation."""
     try:
-        version_result = subprocess.run(["beet", "version"], capture_output=True, text=True)
-        config_result = subprocess.run(["beet", "config"], capture_output=True, text=True)
+        version_result = subprocess.run([BEET_EXECUTABLE, "version"], capture_output=True, text=True)
+        config_result = subprocess.run([BEET_EXECUTABLE, "config"], capture_output=True, text=True)
         
         return {
             "success": True,
