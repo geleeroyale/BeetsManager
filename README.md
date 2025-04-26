@@ -136,15 +136,11 @@ docker-compose logs -f
 
 ## Docker Image Build (GitHub Actions)
 
-A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) is configured to automatically build and push the Docker image to GHCR (`ghcr.io/<your-username>/<your-repo-name>`).
+A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) is configured to automatically build and push the Docker image (which includes Beets) to GHCR (`ghcr.io/<your-username>/<your-repo-name>`).
 
 - **Triggers:** Pushes to the `main` branch.
-- **Default Build:** Builds the image _without_ Beets installed (`INSTALL_BEETS=false`) and tags it with `latest` and the commit SHA.
-- **Manual Trigger:** You can manually run the workflow from the Actions tab in your GitHub repository. This allows you to:
-  - Choose whether to install Beets (`INSTALL_BEETS=true/false`).
-  - Specify custom tags (e.g., `latest, with-beets`, `v1.0.0`).
-
-If you manually build an image with Beets included (e.g., tagged `latest-with-beets`), update the `IMAGE_TAG` in your `.env` file accordingly to use that specific image.
+- **Default Build:** Builds the image (including Beets) and tags it with `latest` and the commit SHA.
+- **Manual Trigger:** You can manually run the workflow from the Actions tab in your GitHub repository. This allows you to specify custom tags (e.g., `v1.0.0`).
 
 ## Configuration Details
 
@@ -159,7 +155,6 @@ If you manually build an image with Beets included (e.g., tagged `latest-with-be
 - **`SESSION_SECRET`**: Secret key for Flask sessions. **Change this!**
 - **`BEETS_CONFIG_PATH`**: (Container Env Var) Tells the app where to find the config file _inside_ the container (`/root/.config/beets/config.yaml`).
 - **`MUSIC_DIRECTORY_CONTAINER` / `DOWNLOAD_DIRECTORY_CONTAINER`**: (Container Env Vars) Set to `/music` and `/downloads`. Crucial for Beets config.
-- **`INSTALL_BEETS`**: (Build Argument) Used _only_ during the GitHub Action build process. Not used in the `.env` file when pulling the image.
 
 ## Contributing
 

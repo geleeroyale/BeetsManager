@@ -11,9 +11,8 @@ COPY requirements.txt requirements.txt
 # Use --no-cache-dir to reduce image size
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Optionally install beets if requested
-ARG INSTALL_BEETS=false
-RUN if [ "$INSTALL_BEETS" = "true" ] ; then pip install --no-cache-dir beets; fi
+# Always install beets
+RUN pip install --no-cache-dir beets
 
 # Copy the current directory contents into the container at /app
 COPY . /app
