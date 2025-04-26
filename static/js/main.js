@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize navigation event listeners
     setupNavigation();
+    
+    // Check if we need to show the connection status in the header
+    checkConnectionStatus();
 });
 
 function setupNavigation() {
@@ -133,5 +136,68 @@ function setButtonLoading(button, isLoading) {
         const originalText = button.getAttribute('data-original-text');
         button.textContent = originalText;
         button.disabled = false;
+    }
+}
+
+// Check connection status and update navigation
+function checkConnectionStatus() {
+    // Add a connection indicator to the navbar if it doesn't exist
+    const navbar = document.querySelector('.navbar-nav');
+    if (navbar) {
+        // Check if connection indicator already exists
+        let connectionIndicator = document.getElementById('connection-indicator');
+        if (!connectionIndicator) {
+            // Create a new indicator
+            connectionIndicator = document.createElement('li');
+            connectionIndicator.className = 'nav-item ms-3';
+            connectionIndicator.id = 'connection-indicator';
+            
+            // Create the indicator content
+            connectionIndicator.innerHTML = `
+                <span class="badge bg-secondary d-flex align-items-center">
+                    <i class="fas fa-spinner fa-spin me-1"></i>
+                    <span>Checking...</span>
+                </span>
+            `;
+            
+            navbar.appendChild(connectionIndicator);
+        }
+        
+        // Fetch the connection mode
+        fetch('/api/connection/mode')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch connection mode');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update the indicator based on mode
+                if (data.mode === 'local') {
+                    connectionIndicator.innerHTML = `
+                        <a href="/config" class="badge bg-success d-flex align-items-center text-decoration-none">
+                            <i class="fas fa-laptop me-1"></i>
+                            <span>Local</span>
+                        </a>
+                    `;
+                } else {
+                    const host = data.remote_config?.host || 'Remote';
+                    connectionIndicator.innerHTML = `
+                        <a href="/config" class="badge bg-primary d-flex align-items-center text-decoration-none">
+                            <i class="fas fa-server me-1"></i>
+                            <span>${host}</span>
+                        </a>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error checking connection status:', error);
+                connectionIndicator.innerHTML = `
+                    <a href="/config" class="badge bg-danger d-flex align-items-center text-decoration-none">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <span>Error</span>
+                    </a>
+                `;
+            });
     }
 }

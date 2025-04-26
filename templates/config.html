@@ -1,0 +1,669 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="config-container">
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h1 class="h4 mb-0">
+                <i class="fas fa-cog me-2"></i>
+                Configuration
+            </h1>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                Configure your connection to beets. You can use a local beets installation or connect to a remote server.
+            </div>
+            
+            <!-- Connection Mode Tabs -->
+            <ul class="nav nav-tabs mb-3" id="connectionTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="local-tab" data-bs-toggle="tab" data-bs-target="#local" type="button" role="tab">
+                        <i class="fas fa-laptop me-1"></i> Local
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="remote-tab" data-bs-toggle="tab" data-bs-target="#remote" type="button" role="tab">
+                        <i class="fas fa-server me-1"></i> Remote
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="connectionTabContent">
+                <!-- Local Connection Tab -->
+                <div class="tab-pane fade" id="local" role="tabpanel" aria-labelledby="local-tab">
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Local Beets Configuration</h5>
+                            <p class="card-text">
+                                Connect to the beets library on this machine. Make sure beets is installed and configured correctly.
+                            </p>
+                            
+                            <div class="mb-3" id="local-status">
+                                <!-- Status will be populated dynamically -->
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-2">Checking local configuration...</span>
+                            </div>
+                            
+                            <button type="button" id="use-local-button" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>
+                                Use Local Connection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Remote Connection Tab -->
+                <div class="tab-pane fade" id="remote" role="tabpanel" aria-labelledby="remote-tab">
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Remote Beets Configuration</h5>
+                            <p class="card-text">
+                                Connect to a beets library on a remote server. This requires SSH access to the server.
+                            </p>
+                            
+                            <form id="remote-config-form">
+                                <div class="mb-3">
+                                    <label for="remote-host" class="form-label">Host</label>
+                                    <input type="text" class="form-control" id="remote-host" placeholder="example.com or 192.168.1.100" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="remote-port" class="form-label">SSH Port</label>
+                                    <input type="number" class="form-control" id="remote-port" value="22">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="remote-username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="remote-username" placeholder="username">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="remote-password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="remote-password" placeholder="password">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="remote-db-path" class="form-label">Beets Database Path</label>
+                                    <input type="text" class="form-control" id="remote-db-path" placeholder="/home/username/.config/beets/library.db">
+                                    <div class="form-text">The full path to the beets database file on the remote server</div>
+                                </div>
+                                
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="remote-use-ssh" checked>
+                                    <label class="form-check-label" for="remote-use-ssh">Use SSH Connection</label>
+                                </div>
+                                
+                                <div id="api-options" class="mb-3 d-none">
+                                    <label for="remote-api-url" class="form-label">API URL</label>
+                                    <input type="text" class="form-control" id="remote-api-url" placeholder="https://example.com/beets-api">
+                                    
+                                    <div class="mt-2">
+                                        <label for="remote-api-key" class="form-label">API Key</label>
+                                        <input type="text" class="form-control" id="remote-api-key" placeholder="api_key">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3" id="connection-test-result">
+                                    <!-- Test results will be shown here -->
+                                </div>
+                                
+                                <div class="d-flex">
+                                    <button type="button" id="test-connection-button" class="btn btn-secondary me-2">
+                                        <i class="fas fa-vial me-1"></i>
+                                        Test Connection
+                                    </button>
+                                    
+                                    <button type="submit" id="save-remote-button" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        Save & Use Remote Connection
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Current Connection Information -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Current Connection
+                    </h5>
+                </div>
+                <div class="card-body" id="current-connection">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="ms-2">Loading connection information...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Connection mode and configuration
+let currentMode = 'local';
+let remoteConfig = {};
+
+// Initialize the page when loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Get current connection mode
+    fetchConnectionMode();
+    
+    // Activate the appropriate tab based on current mode
+    document.getElementById('local-tab').addEventListener('click', function() {
+        checkLocalConfig();
+    });
+    
+    document.getElementById('remote-tab').addEventListener('click', function() {
+        loadRemoteConfig();
+    });
+    
+    // Button events
+    document.getElementById('use-local-button').addEventListener('click', function() {
+        setConnectionMode('local');
+    });
+    
+    document.getElementById('remote-use-ssh').addEventListener('change', function() {
+        const apiOptions = document.getElementById('api-options');
+        if (this.checked) {
+            apiOptions.classList.add('d-none');
+        } else {
+            apiOptions.classList.remove('d-none');
+        }
+    });
+    
+    document.getElementById('test-connection-button').addEventListener('click', function() {
+        testRemoteConnection();
+    });
+    
+    document.getElementById('remote-config-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveRemoteConfig();
+    });
+});
+
+// Fetch the current connection mode
+function fetchConnectionMode() {
+    fetch('/api/connection/mode')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch connection mode');
+            }
+            return response.json();
+        })
+        .then(data => {
+            currentMode = data.mode;
+            remoteConfig = data.remote_config;
+            
+            // Update UI to show current mode
+            updateConnectionInfo(data);
+            
+            // Activate the correct tab
+            if (currentMode === 'local') {
+                document.getElementById('local-tab').click();
+            } else {
+                document.getElementById('remote-tab').click();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching connection mode:', error);
+            showError('Failed to fetch connection mode: ' + error.message);
+        });
+}
+
+// Check local beets configuration
+function checkLocalConfig() {
+    const localStatus = document.getElementById('local-status');
+    localStatus.innerHTML = `
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="ms-2">Checking local configuration...</span>
+    `;
+    
+    // This will already have the local config status from the index page
+    fetch('/')
+        .then(response => response.text())
+        .then(html => {
+            // Extract the configuration data from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const configStatus = doc.getElementById('config-status');
+            
+            if (configStatus) {
+                const status = JSON.parse(configStatus.dataset.status || '{}');
+                updateLocalStatus(status);
+            } else {
+                localStatus.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Could not determine local configuration status.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error checking local config:', error);
+            localStatus.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times-circle me-2"></i>
+                    Error checking local configuration: ${error.message}
+                </div>
+            `;
+        });
+}
+
+// Update local status display
+function updateLocalStatus(status) {
+    const localStatus = document.getElementById('local-status');
+    
+    if (!status.beets_installed) {
+        localStatus.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle me-2"></i>
+                Beets is not installed or not in PATH. Please install beets first.
+            </div>
+        `;
+        return;
+    }
+    
+    if (!status.config_exists || !status.db_exists) {
+        localStatus.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Beets is installed but not fully configured. Please check the configuration.
+            </div>
+            <ul class="list-group mt-3">
+                <li class="list-group-item ${status.config_exists ? 'list-group-item-success' : 'list-group-item-warning'}">
+                    <i class="fas fa-${status.config_exists ? 'check' : 'exclamation'}"></i> 
+                    Configuration File: ${status.config_exists ? 'Found' : 'Not Found'} 
+                    <span class="text-muted">(${status.config_path})</span>
+                </li>
+                <li class="list-group-item ${status.db_exists ? 'list-group-item-success' : 'list-group-item-warning'}">
+                    <i class="fas fa-${status.db_exists ? 'check' : 'exclamation'}"></i> 
+                    Database File: ${status.db_exists ? 'Found' : 'Not Found'} 
+                    <span class="text-muted">(${status.db_path})</span>
+                </li>
+            </ul>
+        `;
+    } else {
+        localStatus.innerHTML = `
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                Beets is installed and configured correctly.
+            </div>
+            <ul class="list-group mt-3">
+                <li class="list-group-item list-group-item-success">
+                    <i class="fas fa-check"></i> 
+                    Configuration File: Found 
+                    <span class="text-muted">(${status.config_path})</span>
+                </li>
+                <li class="list-group-item list-group-item-success">
+                    <i class="fas fa-check"></i> 
+                    Database File: Found 
+                    <span class="text-muted">(${status.db_path})</span>
+                </li>
+            </ul>
+        `;
+    }
+}
+
+// Load remote configuration into form
+function loadRemoteConfig() {
+    if (remoteConfig) {
+        document.getElementById('remote-host').value = remoteConfig.host || '';
+        document.getElementById('remote-port').value = remoteConfig.port || 22;
+        document.getElementById('remote-username').value = remoteConfig.username || '';
+        document.getElementById('remote-password').value = remoteConfig.password || '';
+        document.getElementById('remote-db-path').value = remoteConfig.db_path || '';
+        document.getElementById('remote-use-ssh').checked = remoteConfig.use_ssh !== false;
+        document.getElementById('remote-api-url').value = remoteConfig.api_url || '';
+        document.getElementById('remote-api-key').value = remoteConfig.api_key || '';
+        
+        // Show/hide API options
+        const apiOptions = document.getElementById('api-options');
+        if (remoteConfig.use_ssh !== false) {
+            apiOptions.classList.add('d-none');
+        } else {
+            apiOptions.classList.remove('d-none');
+        }
+    }
+}
+
+// Test remote connection
+function testRemoteConnection() {
+    const testButton = document.getElementById('test-connection-button');
+    const resultArea = document.getElementById('connection-test-result');
+    
+    // Get form values
+    const config = getRemoteConfigFromForm();
+    
+    // Set button to loading state
+    setButtonLoading(testButton, true);
+    
+    // Show loading message
+    resultArea.innerHTML = `
+        <div class="alert alert-info">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Testing...</span>
+            </div>
+            <span class="ms-2">Testing connection to ${config.host}...</span>
+        </div>
+    `;
+    
+    // First save the config
+    fetch('/api/connection/remote', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(config)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to save remote configuration');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Then switch to remote mode temporarily for testing
+        return fetch('/api/connection/mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ mode: 'remote' })
+        });
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to switch to remote mode');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Now test the connection by checking beets config
+        return fetch('/');
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Extract the configuration data from the HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const configStatus = doc.getElementById('config-status');
+        
+        if (configStatus) {
+            const status = JSON.parse(configStatus.dataset.status || '{}');
+            
+            // Show the test results
+            if (status.beets_installed && status.db_exists) {
+                resultArea.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Successfully connected to remote beets instance.
+                    </div>
+                `;
+            } else if (status.connection_error) {
+                resultArea.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        Connection error: ${status.connection_error}
+                    </div>
+                `;
+            } else {
+                resultArea.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Connected to server, but beets is not properly configured.
+                        <ul class="mt-2 mb-0">
+                            <li>Beets installed: ${status.beets_installed ? 'Yes' : 'No'}</li>
+                            <li>Database exists: ${status.db_exists ? 'Yes' : 'No'}</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        } else {
+            resultArea.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Could not determine remote configuration status.
+                </div>
+            `;
+        }
+        
+        // Reset button
+        setButtonLoading(testButton, false);
+        
+        // Switch back to the original mode
+        return fetch('/api/connection/mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ mode: currentMode })
+        });
+    })
+    .catch(error => {
+        console.error('Error testing remote connection:', error);
+        resultArea.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle me-2"></i>
+                Error testing connection: ${error.message}
+            </div>
+        `;
+        setButtonLoading(testButton, false);
+        
+        // Switch back to the original mode
+        fetch('/api/connection/mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ mode: currentMode })
+        }).catch(e => console.error('Error switching back to original mode:', e));
+    });
+}
+
+// Save remote configuration and switch to remote mode
+function saveRemoteConfig() {
+    const saveButton = document.getElementById('save-remote-button');
+    const resultArea = document.getElementById('connection-test-result');
+    
+    // Get form values
+    const config = getRemoteConfigFromForm();
+    
+    // Set button to loading state
+    setButtonLoading(saveButton, true);
+    
+    // Show loading message
+    resultArea.innerHTML = `
+        <div class="alert alert-info">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Saving...</span>
+            </div>
+            <span class="ms-2">Saving configuration and switching to remote mode...</span>
+        </div>
+    `;
+    
+    // Save the config
+    fetch('/api/connection/remote', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(config)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to save remote configuration');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Then switch to remote mode
+        return fetch('/api/connection/mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ mode: 'remote' })
+        });
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to switch to remote mode');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Show success message
+        resultArea.innerHTML = `
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                Successfully saved configuration and switched to remote mode.
+            </div>
+        `;
+        
+        // Update UI
+        currentMode = 'remote';
+        remoteConfig = config;
+        updateConnectionInfo({ mode: 'remote', remote_config: config });
+        
+        // Reset button
+        setButtonLoading(saveButton, false);
+        
+        // Show success toast
+        showSuccess('Successfully switched to remote mode');
+    })
+    .catch(error => {
+        console.error('Error saving remote configuration:', error);
+        resultArea.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle me-2"></i>
+                Error saving configuration: ${error.message}
+            </div>
+        `;
+        setButtonLoading(saveButton, false);
+        showError('Failed to save remote configuration: ' + error.message);
+    });
+}
+
+// Set connection mode (local or remote)
+function setConnectionMode(mode) {
+    const button = document.getElementById('use-local-button');
+    
+    // Set button to loading state
+    setButtonLoading(button, true);
+    
+    // Make API request to set connection mode
+    fetch('/api/connection/mode', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ mode: mode })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to set connection mode');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Update UI
+        currentMode = mode;
+        updateConnectionInfo({ mode: mode, remote_config: remoteConfig });
+        
+        // Reset button
+        setButtonLoading(button, false);
+        
+        // Show success message
+        showSuccess(`Successfully switched to ${mode} mode`);
+    })
+    .catch(error => {
+        console.error('Error setting connection mode:', error);
+        showError('Failed to set connection mode: ' + error.message);
+        setButtonLoading(button, false);
+    });
+}
+
+// Update connection info display
+function updateConnectionInfo(data) {
+    const connectionInfo = document.getElementById('current-connection');
+    
+    if (data.mode === 'local') {
+        connectionInfo.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-laptop fs-4 me-3 text-primary"></i>
+                <div>
+                    <h5 class="mb-1">Local Connection</h5>
+                    <p class="mb-0 text-muted">Connected to the local beets library.</p>
+                </div>
+            </div>
+        `;
+        
+        // Activate local tab
+        const localTab = document.getElementById('local-tab');
+        if (!localTab.classList.contains('active')) {
+            localTab.classList.add('active');
+            document.getElementById('local').classList.add('show', 'active');
+            document.getElementById('remote-tab').classList.remove('active');
+            document.getElementById('remote').classList.remove('show', 'active');
+        }
+    } else {
+        // Remote connection
+        const config = data.remote_config || {};
+        const connectionType = config.use_ssh !== false ? 'SSH' : 'API';
+        
+        connectionInfo.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-server fs-4 me-3 text-primary"></i>
+                <div>
+                    <h5 class="mb-1">Remote Connection (${connectionType})</h5>
+                    <p class="mb-0 text-muted">
+                        Connected to ${config.host || 'Unknown Host'}
+                        ${config.username ? `as ${config.username}` : ''}
+                    </p>
+                    ${config.db_path ? `<p class="mb-0 text-muted small">Database: ${config.db_path}</p>` : ''}
+                    ${config.api_url ? `<p class="mb-0 text-muted small">API URL: ${config.api_url}</p>` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Activate remote tab
+        const remoteTab = document.getElementById('remote-tab');
+        if (!remoteTab.classList.contains('active')) {
+            remoteTab.classList.add('active');
+            document.getElementById('remote').classList.add('show', 'active');
+            document.getElementById('local-tab').classList.remove('active');
+            document.getElementById('local').classList.remove('show', 'active');
+        }
+    }
+}
+
+// Get remote configuration from form
+function getRemoteConfigFromForm() {
+    const useSSH = document.getElementById('remote-use-ssh').checked;
+    
+    return {
+        host: document.getElementById('remote-host').value,
+        port: parseInt(document.getElementById('remote-port').value) || 22,
+        username: document.getElementById('remote-username').value,
+        password: document.getElementById('remote-password').value,
+        db_path: document.getElementById('remote-db-path').value,
+        use_ssh: useSSH,
+        api_url: document.getElementById('remote-api-url').value,
+        api_key: document.getElementById('remote-api-key').value
+    };
+}
+</script>
+{% endblock %}

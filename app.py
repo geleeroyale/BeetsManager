@@ -4,7 +4,8 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from beets_utils import (
     get_library_items, get_item_details, execute_beets_command, 
     get_album_art, import_music, get_item_count, search_library,
-    get_albums, get_artists, check_beets_config
+    get_albums, get_artists, check_beets_config, set_connection_mode,
+    get_connection_mode, set_remote_config
 )
 
 # Set up logging
@@ -14,6 +15,13 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default_beets_gui_secret")
+
+# Add configuration route
+@app.route('/config')
+def config_view():
+    """Render the configuration view."""
+    conn_info = get_connection_mode()
+    return render_template('config.html', connection_info=conn_info)
 
 @app.route('/')
 def index():
@@ -140,6 +148,48 @@ def api_import():
         return jsonify({'result': result})
     except Exception as e:
         logger.error(f"Error importing music: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Connection mode API endpoints
+@app.route('/api/connection/mode', methods=['GET'])
+def api_get_connection_mode():
+    """Get the current connection mode."""
+    try:
+        mode_info = get_connection_mode()
+        return jsonify(mode_info)
+    except Exception as e:
+        logger.error(f"Error getting connection mode: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/connection/mode', methods=['POST'])
+def api_set_connection_mode():
+    """Set the connection mode (local or remote)."""
+    data = request.get_json()
+    mode = data.get('mode', '')
+    
+    if not mode or mode not in ['local', 'remote']:
+        return jsonify({'error': 'Invalid mode. Must be "local" or "remote"'}), 400
+    
+    try:
+        result = set_connection_mode(mode)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error setting connection mode: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/connection/remote', methods=['POST'])
+def api_set_remote_config():
+    """Set the remote connection configuration."""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No configuration provided'}), 400
+    
+    try:
+        result = set_remote_config(data)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error setting remote config: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
