@@ -1,0 +1,102 @@
+/* Additional custom styles */
+body {
+    padding-top: 56px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    flex: 1;
+    padding: 1.5rem 0;
+}
+
+.footer {
+    padding: 1rem 0;
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 1000;
+}
+
+/* Library table styles */
+.library-table {
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.library-table th {
+    cursor: pointer;
+}
+
+.library-table th:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.library-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.075);
+}
+
+/* Command output textarea */
+.command-output {
+    font-family: monospace;
+    white-space: pre;
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+    height: 300px;
+    overflow-y: auto;
+}
+
+/* Import form */
+.import-path-input {
+    font-family: monospace;
+}
+
+/* Sidebar navigation */
+.sidebar {
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        position: static;
+        height: auto;
+    }
+}
+
+/* Album art */
+.album-art {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.album-art-placeholder {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: var(--bs-gray-200);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: var(--bs-gray-600);
+    border-radius: 4px;
+}

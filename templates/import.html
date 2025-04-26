@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="import-container">
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h1 class="h4 mb-0">
+                <i class="fas fa-file-import me-2"></i>
+                Import Music
+            </h1>
+        </div>
+        <div class="card-body">
+            <p class="mb-4">
+                Import music files into your Beets library. Enter the path to a directory or specific file to import.
+            </p>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Importing music is a comprehensive process. The Beets importer will analyze your files, extract metadata, and organize them according to your configuration.
+            </div>
+            
+            <!-- Import Form -->
+            <form id="import-form" class="mb-4">
+                <div class="mb-3">
+                    <label for="path-input" class="form-label">Path to import</label>
+                    <input type="text" class="form-control import-path-input" id="path-input" placeholder="/path/to/music/files" required>
+                    <div class="form-text">Enter the full path to a directory or file you want to import</div>
+                </div>
+                
+                <div class="d-flex">
+                    <button type="submit" class="btn btn-primary" id="import-button">
+                        <i class="fas fa-file-import me-1"></i>
+                        Import Music
+                    </button>
+                    <button type="button" class="btn btn-secondary ms-2" id="clear-output">
+                        <i class="fas fa-eraser me-1"></i>
+                        Clear Output
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Import Output -->
+            <div class="mb-3">
+                <label for="import-output" class="form-label">Import Output</label>
+                <textarea class="form-control command-output" id="import-output" rows="15" readonly></textarea>
+            </div>
+            
+            <!-- Import Tips -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Import Tips
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Beets will try to identify your music using online sources.</li>
+                        <li>The import process may require interaction depending on your configuration.</li>
+                        <li>If files already exist in the library, Beets will handle duplicates according to your configuration.</li>
+                        <li>For large imports, the process may take some time.</li>
+                        <li>Check the output for any errors or warnings during the import process.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/import.js') }}"></script>
+{% endblock %}

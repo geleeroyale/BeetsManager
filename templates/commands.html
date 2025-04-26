@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="command-container">
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h1 class="h4 mb-0">
+                <i class="fas fa-terminal me-2"></i>
+                Beets Commands
+            </h1>
+        </div>
+        <div class="card-body">
+            <p class="mb-4">
+                Execute Beets commands directly through this interface. Select a common command or enter your own custom command.
+            </p>
+            
+            <!-- Command Selector -->
+            <div class="mb-3">
+                <label for="common-commands" class="form-label">Common Commands</label>
+                <select class="form-select" id="common-commands">
+                    <!-- Options will be populated dynamically -->
+                </select>
+            </div>
+            
+            <!-- Command Form -->
+            <form id="command-form" class="mb-4">
+                <div class="mb-3">
+                    <label for="command-input" class="form-label">Command</label>
+                    <div class="input-group">
+                        <span class="input-group-text">beet</span>
+                        <input type="text" class="form-control" id="command-input" placeholder="list artist:Beatles" required>
+                    </div>
+                    <div class="form-text">Enter a beets command without the 'beet' prefix</div>
+                </div>
+                
+                <div class="d-flex">
+                    <button type="submit" class="btn btn-primary" id="execute-button">
+                        <i class="fas fa-play me-1"></i>
+                        Execute Command
+                    </button>
+                    <button type="button" class="btn btn-secondary ms-2" id="clear-output">
+                        <i class="fas fa-eraser me-1"></i>
+                        Clear Output
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Command Output -->
+            <div class="mb-3">
+                <label for="command-output" class="form-label">Command Output</label>
+                <textarea class="form-control command-output" id="command-output" rows="15" readonly></textarea>
+            </div>
+            
+            <!-- Command Reference -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-book me-2"></i>
+                        Command Reference
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Core Commands</h6>
+                            <ul>
+                                <li><code>list [query]</code> - List all matching items</li>
+                                <li><code>import [path]</code> - Import new music</li>
+                                <li><code>info [query]</code> - Show file metadata</li>
+                                <li><code>modify [query] [changes]</code> - Change metadata</li>
+                                <li><code>update</code> - Update the library</li>
+                                <li><code>remove [query]</code> - Remove items from library</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Query Examples</h6>
+                            <ul>
+                                <li><code>artist:Beatles</code> - Match artist field</li>
+                                <li><code>album:Revolver</code> - Match album field</li>
+                                <li><code>year:1967</code> - Match year field</li>
+                                <li><code>genre:rock</code> - Match genre field</li>
+                                <li><code>title:Yesterday</code> - Match title field</li>
+                                <li><code>artist:Beatles album:Revolver</code> - Multiple criteria</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="https://beets.readthedocs.io/en/stable/reference/cli.html" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt me-1"></i>
+                        View Full Documentation
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/commands.js') }}"></script>
+{% endblock %}
