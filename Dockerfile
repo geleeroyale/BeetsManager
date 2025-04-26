@@ -4,17 +4,24 @@ FROM python:3.11-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container at /app
-COPY requirements.txt requirements.txt
+# Install pip-tools for compiling requirements
+RUN pip install --no-cache-dir pip-tools
 
-# Install any needed packages specified in requirements.txt
+# Copy only the pyproject.toml file first to leverage Docker cache
+COPY pyproject.toml pyproject.toml
+
+# Compile requirements.txt from pyproject.toml
+# This ensures only necessary, cross-platform dependencies are included
+RUN pip-compile pyproject.toml --output-file requirements.txt --no-header --strip-extras
+
+# Install any needed packages specified in the generated requirements.txt
 # Use --no-cache-dir to reduce image size
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Always install beets
 RUN pip install --no-cache-dir beets
 
-# Copy the current directory contents into the container at /app
+# Copy the rest of the application code
 COPY . /app
 
 # Make port 8000 available to the world outside this container (we'll map this later)
