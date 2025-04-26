@@ -426,3 +426,122 @@ def get_beets_info():
     except Exception as e:
         logger.error(f"Error getting beets info: {str(e)}")
         return {"success": False, "error": str(e)}
+
+def reset_database():
+    """Reset the beets database by moving it to a backup and letting beets recreate it."""
+    db_path = get_beets_db_path()
+    
+    try:
+        # Check if database exists
+        if not db_path.exists():
+            return {
+                "success": False, 
+                "message": f"Database not found at {db_path}. Nothing to reset."
+            }
+            
+        # Create a backup with timestamp
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = db_path.with_name(f"library_backup_{timestamp}.db")
+        
+        # Move the database file to backup
+        shutil.move(str(db_path), str(backup_path))
+        
+        # Run beet command to initialize a new database
+        result = subprocess.run([BEET_EXECUTABLE, "version"], capture_output=True, text=True)
+        
+        return {
+            "success": True,
+            "message": f"Database reset successfully. Old database backed up to {backup_path}",
+            "backup_path": str(backup_path)
+        }
+    except Exception as e:
+        logger.error(f"Error resetting database: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Failed to reset database."
+        }
+
+def check_paths():
+    """Check if all required paths exist and are accessible."""
+    config_status = check_beets_config()
+    config_path = Path(config_status["config_path"])
+    db_path = Path(config_status["db_path"])
+    
+    results = {
+        "paths_checked": [],
+        "all_paths_accessible": True
+    }
+    
+    # Check config directory
+    config_dir = config_path.parent
+    config_dir_status = {
+        "path": str(config_dir),
+        "exists": config_dir.exists(),
+        "is_dir": config_dir.is_dir() if config_dir.exists() else False,
+        "writable": os.access(config_dir, os.W_OK) if config_dir.exists() else False
+    }
+    results["paths_checked"].append({"config_dir": config_dir_status})
+    if not (config_dir_status["exists"] and config_dir_status["is_dir"] and config_dir_status["writable"]):
+        results["all_paths_accessible"] = False
+    
+    # Check config file
+    config_file_status = {
+        "path": str(config_path),
+        "exists": config_path.exists(),
+        "is_file": config_path.is_file() if config_path.exists() else False,
+        "readable": os.access(config_path, os.R_OK) if config_path.exists() else False,
+        "writable": os.access(config_path, os.W_OK) if config_path.exists() else False
+    }
+    results["paths_checked"].append({"config_file": config_file_status})
+    if config_path.exists() and not (config_file_status["is_file"] and config_file_status["readable"]):
+        results["all_paths_accessible"] = False
+    
+    # Check database file and directory
+    db_dir = db_path.parent
+    db_dir_status = {
+        "path": str(db_dir),
+        "exists": db_dir.exists(),
+        "is_dir": db_dir.is_dir() if db_dir.exists() else False,
+        "writable": os.access(db_dir, os.W_OK) if db_dir.exists() else False
+    }
+    results["paths_checked"].append({"db_dir": db_dir_status})
+    if not (db_dir_status["exists"] and db_dir_status["is_dir"] and db_dir_status["writable"]):
+        results["all_paths_accessible"] = False
+    
+    # Check library file if it exists
+    if db_path.exists():
+        db_file_status = {
+            "path": str(db_path),
+            "exists": True,
+            "is_file": db_path.is_file(),
+            "readable": os.access(db_path, os.R_OK),
+            "writable": os.access(db_path, os.W_OK)
+        }
+        results["paths_checked"].append({"db_file": db_file_status})
+        if not (db_file_status["is_file"] and db_file_status["readable"] and db_file_status["writable"]):
+            results["all_paths_accessible"] = False
+    
+    # If config exists, check music directories defined in config
+    if config_path.exists():
+        try:
+            config = read_beets_config()
+            if isinstance(config, dict) and "directory" in config:
+                music_dir = Path(config["directory"])
+                music_dir_status = {
+                    "path": str(music_dir),
+                    "exists": music_dir.exists(),
+                    "is_dir": music_dir.is_dir() if music_dir.exists() else False,
+                    "readable": os.access(music_dir, os.R_OK) if music_dir.exists() else False,
+                    "writable": os.access(music_dir, os.W_OK) if music_dir.exists() else False
+                }
+                results["paths_checked"].append({"music_dir": music_dir_status})
+                if not (music_dir_status["exists"] and music_dir_status["is_dir"] and music_dir_status["readable"]):
+                    results["all_paths_accessible"] = False
+        except Exception as e:
+            logger.error(f"Error checking music directory: {str(e)}")
+            results["music_dir_error"] = str(e)
+            results["all_paths_accessible"] = False
+    
+    return results

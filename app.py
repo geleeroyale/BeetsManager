@@ -5,7 +5,8 @@ from beets_utils import (
     get_library_items, get_item_details, execute_beets_command, 
     get_album_art, import_music, get_item_count, search_library,
     get_albums, get_artists, check_beets_config, 
-    read_beets_config, update_beets_config, get_beets_plugins, get_beets_info
+    read_beets_config, update_beets_config, get_beets_plugins, get_beets_info,
+    reset_database, check_paths
 )
 
 # Set up logging
@@ -201,6 +202,27 @@ def api_get_beets_info():
         return jsonify(info)
     except Exception as e:
         logger.error(f"Error getting beets info: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Add new endpoints for database reset and path checking
+@app.route('/api/beets/reset', methods=['POST'])
+def api_reset_database():
+    """Reset the beets database."""
+    try:
+        result = reset_database()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error resetting database: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/beets/check_paths', methods=['GET'])
+def api_check_paths():
+    """Check if all required paths exist and are accessible."""
+    try:
+        result = check_paths()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error checking paths: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
