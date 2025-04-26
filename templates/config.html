@@ -15,8 +15,8 @@
       </div>
 
       <!-- Status Section -->
-      <div class="card bg-light mb-4">
-        <div class="card-header">
+      <div class="card bg-dark border-secondary mb-4">
+        <div class="card-header bg-dark border-bottom border-secondary">
           <h5 class="mb-0">
             <i class="fas fa-info-circle me-2"></i>
             Status
@@ -36,9 +36,9 @@
               is installed and configured correctly. {% else %} Beets
               configuration requires attention. {% endif %}
             </div>
-            <ul class="list-group">
+            <ul class="list-group list-group-dark">
               <li
-                class="list-group-item {% if config_status.beets_installed %}list-group-item-success{% else %}list-group-item-danger{% endif %}"
+                class="list-group-item bg-dark border-secondary {% if config_status.beets_installed %}text-success{% else %}text-danger{% endif %}"
               >
                 <i
                   class="fas fa-{% if config_status.beets_installed %}check{% else %}times{% endif %}-circle me-2"
@@ -47,7 +47,7 @@
                 else %}No{% endif %}
               </li>
               <li
-                class="list-group-item {% if config_status.config_exists %}list-group-item-success{% else %}list-group-item-warning{% endif %}"
+                class="list-group-item bg-dark border-secondary {% if config_status.config_exists %}text-success{% else %}text-warning{% endif %}"
               >
                 <i
                   class="fas fa-{% if config_status.config_exists %}check{% else %}exclamation{% endif %}-circle me-2"
@@ -59,7 +59,7 @@
                 >
               </li>
               <li
-                class="list-group-item {% if config_status.db_exists %}list-group-item-success{% else %}list-group-item-warning{% endif %}"
+                class="list-group-item bg-dark border-secondary {% if config_status.db_exists %}text-success{% else %}text-warning{% endif %}"
               >
                 <i
                   class="fas fa-{% if config_status.db_exists %}check{% else %}exclamation{% endif %}-circle me-2"
@@ -129,7 +129,7 @@
           role="tabpanel"
           aria-labelledby="config-tab"
         >
-          <div class="card bg-light">
+          <div class="card bg-dark border-secondary">
             <div class="card-body">
               <form id="config-form">
                 <div class="mb-3">
@@ -137,12 +137,12 @@
                     >Music Directory</label
                   >
                   <div class="input-group">
-                    <span class="input-group-text"
+                    <span class="input-group-text bg-dark border-secondary"
                       ><i class="fas fa-folder"></i
                     ></span>
                     <input
                       type="text"
-                      class="form-control"
+                      class="form-control bg-dark border-secondary text-light"
                       id="config-directory"
                       placeholder="/music"
                     />
@@ -157,12 +157,12 @@
                     >Library File Path</label
                   >
                   <div class="input-group">
-                    <span class="input-group-text"
+                    <span class="input-group-text bg-dark border-secondary"
                       ><i class="fas fa-database"></i
                     ></span>
                     <input
                       type="text"
-                      class="form-control"
+                      class="form-control bg-dark border-secondary text-light"
                       id="config-library"
                       placeholder="/root/.config/beets/library.db"
                       readonly
@@ -179,7 +179,7 @@
                   >
                   <div class="form-check mt-2">
                     <input
-                      class="form-check-input"
+                      class="form-check-input bg-dark border-secondary"
                       type="checkbox"
                       id="config-import-copy"
                     />
@@ -189,7 +189,7 @@
                   </div>
                   <div class="form-check">
                     <input
-                      class="form-check-input"
+                      class="form-check-input bg-dark border-secondary"
                       type="checkbox"
                       id="config-import-move"
                     />
@@ -199,7 +199,7 @@
                   </div>
                   <div class="form-check">
                     <input
-                      class="form-check-input"
+                      class="form-check-input bg-dark border-secondary"
                       type="checkbox"
                       id="config-import-write"
                     />
@@ -215,7 +215,7 @@
                   >
                   <input
                     type="text"
-                    class="form-control"
+                    class="form-control bg-dark border-secondary text-light"
                     id="config-path-format"
                     placeholder="$albumartist/$album%aunique{}/$track $title"
                   />
@@ -228,7 +228,7 @@
                   <button
                     type="button"
                     id="config-reset-btn"
-                    class="btn btn-secondary"
+                    class="btn btn-outline-secondary"
                   >
                     <i class="fas fa-sync-alt me-1"></i> Reset
                   </button>
@@ -252,12 +252,12 @@
           role="tabpanel"
           aria-labelledby="plugins-tab"
         >
-          <div class="card bg-light">
+          <div class="card bg-dark border-secondary">
             <div class="card-body">
               <div id="plugins-list">
                 {% if plugins_info and plugins_info.success %}
                 <div class="table-responsive">
-                  <table class="table table-hover">
+                  <table class="table table-dark table-hover">
                     <thead>
                       <tr>
                         <th>Plugin</th>
@@ -273,7 +273,7 @@
                         <td>
                           <div class="form-check form-switch">
                             <input
-                              class="form-check-input plugin-toggle"
+                              class="form-check-input bg-dark border-secondary"
                               type="checkbox"
                               id="plugin-{{ plugin.name }}"
                               data-plugin-name="{{ plugin.name }}"
@@ -303,7 +303,7 @@
           role="tabpanel"
           aria-labelledby="advanced-tab"
         >
-          <div class="card bg-light">
+          <div class="card bg-dark border-secondary">
             <div class="card-body">
               <h5 class="card-title">Raw Configuration</h5>
               <p class="card-text">
@@ -311,7 +311,7 @@
               </p>
               <div class="mb-3">
                 <textarea
-                  class="form-control font-monospace"
+                  class="form-control font-monospace bg-dark border-secondary text-light"
                   id="raw-config"
                   rows="15"
                 ></textarea>
@@ -320,7 +320,7 @@
                 <button
                   type="button"
                   id="raw-config-reload-btn"
-                  class="btn btn-secondary"
+                  class="btn btn-outline-secondary"
                 >
                   <i class="fas fa-sync-alt me-1"></i> Reload
                 </button>
