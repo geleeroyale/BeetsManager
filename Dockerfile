@@ -62,5 +62,5 @@ ENV FLASK_RUN_PORT=8000
 
 # Use our entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
-# Run app.py when the container launches using gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"] 
+# Run app.py with optimized gunicorn settings
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--timeout", "120", "--workers", "2", "--threads", "2", "--log-level", "debug", "main:app"] 
