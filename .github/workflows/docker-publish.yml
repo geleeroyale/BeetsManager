@@ -1,0 +1,90 @@
+name: Docker Publish
+
+on:
+  push:
+    branches: [ "main" ]
+    # Optionally trigger on tags as well
+    # tags: [ 'v*.*.*' ]
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      install_beets:
+        description: 'Install beets in the image?'
+        required: true
+        default: 'false'
+        type: boolean
+      tags:
+        description: 'Comma-separated tags (e.g., latest, v1.0)'
+        required: true
+        default: 'latest'
+
+env:
+  # Use ghcr.io for GitHub Container Registry
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Needed to push to GHCR
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # GITHUB_TOKEN has write access to packages
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Generate tags based on event type
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha # Add git SHA tag
+            # Add tags from workflow_dispatch input if present
+            ${{ github.event_name == 'workflow_dispatch' && format('type=raw,value={0}', join(split(github.event.inputs.tags, ','), ',')) || '' }}
+
+
+      - name: Determine INSTALL_BEETS value
+        id: beets_arg
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "install_beets=${{ github.event.inputs.install_beets }}" >> $GITHUB_OUTPUT
+          else
+            # Default value for non-manual triggers (e.g., push to main)
+            echo "install_beets=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }} # Don't push on PRs
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            INSTALL_BEETS=${{ steps.beets_arg.outputs.install_beets }}
+
+</rewritten_file> 

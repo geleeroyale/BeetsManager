@@ -28,17 +28,27 @@ REMOTE_CONFIG = {
     "api_key": ""     # For authentication with HTTP API
 }
 
+# Define default paths relative to home if env vars are not set
+DEFAULT_BEETS_CONFIG_DIR = Path(os.path.expanduser("~")) / ".config" / "beets"
+DEFAULT_CONFIG_PATH = DEFAULT_BEETS_CONFIG_DIR / "config.yaml"
+DEFAULT_DB_PATH = DEFAULT_BEETS_CONFIG_DIR / "library.db"
+
 def get_beets_config_path():
-    """Get the path to the beets config file."""
-    # Beets typically uses ~/.config/beets/config.yaml
-    home_dir = os.path.expanduser("~")
-    return os.path.join(home_dir, ".config", "beets", "config.yaml")
+    """Get the path to the beets config file, prioritizing ENV."""
+    return Path(os.environ.get("BEETS_CONFIG_PATH", DEFAULT_CONFIG_PATH))
 
 def get_beets_db_path():
-    """Get the path to the beets database."""
-    # Beets typically uses ~/.config/beets/library.db
-    home_dir = os.path.expanduser("~")
-    return os.path.join(home_dir, ".config", "beets", "library.db")
+    """Get the path to the beets database, derived from config path or ENV."""
+    # If BEETS_CONFIG_PATH is set, assume db is in the same directory
+    config_path_str = os.environ.get("BEETS_CONFIG_PATH")
+    if config_path_str:
+        config_path = Path(config_path_str)
+        # Assume library.db is in the same directory as config.yaml
+        # This might need adjustment if user has a non-standard setup
+        return config_path.parent / "library.db" 
+    else:
+        # Fallback to default if env var is not set
+        return DEFAULT_DB_PATH
 
 def check_beets_config():
     """Check if beets is configured correctly."""
@@ -50,8 +60,8 @@ def check_beets_config():
     config_path = get_beets_config_path()
     db_path = get_beets_db_path()
     
-    config_exists = os.path.exists(config_path)
-    db_exists = os.path.exists(db_path)
+    config_exists = config_path.exists()
+    db_exists = db_path.exists()
     
     # Check if beets command is available
     try:
@@ -64,8 +74,8 @@ def check_beets_config():
         "config_exists": config_exists,
         "db_exists": db_exists,
         "beets_installed": beets_installed,
-        "config_path": config_path,
-        "db_path": db_path,
+        "config_path": str(config_path), # Return as string
+        "db_path": str(db_path),     # Return as string
         "connection_mode": "local"
     }
     
@@ -159,7 +169,7 @@ def connect_db():
     
     # Otherwise, connect to local database
     db_path = get_beets_db_path()
-    if not os.path.exists(db_path):
+    if not db_path.exists():
         raise FileNotFoundError(f"Beets database not found at {db_path}")
     
     conn = sqlite3.connect(db_path)
