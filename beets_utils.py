@@ -358,6 +358,27 @@ def update_beets_config(config_updates):
     config_path = get_beets_config_path()
     
     try:
+        # Handle raw YAML input if provided
+        if 'raw_yaml' in config_updates:
+            try:
+                # Parse the raw YAML and use it as the entire config
+                raw_config = yaml.safe_load(config_updates['raw_yaml'])
+                if not isinstance(raw_config, dict):
+                    return {"success": False, "error": "Invalid YAML: must produce a dictionary"}
+                
+                # Make sure parent directories exist
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Write the parsed YAML directly to the config file
+                with open(config_path, 'w') as f:
+                    yaml.dump(raw_config, f, default_flow_style=False, sort_keys=False)
+                
+                return {"success": True, "message": "Configuration updated successfully from raw YAML"}
+            except Exception as e:
+                logger.error(f"Error parsing raw YAML config: {str(e)}")
+                return {"success": False, "error": f"Invalid YAML format: {str(e)}"}
+        
+        # Standard config update
         # Read existing config
         current_config = {}
         if config_path.exists():
@@ -366,6 +387,15 @@ def update_beets_config(config_updates):
         
         # Create parent directories if they don't exist
         config_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Ensure paths are expanded and absolute (especially for directory)
+        if 'directory' in config_updates:
+            # Expand user's home directory if using ~
+            directory = os.path.expanduser(config_updates['directory'])
+            # Convert to absolute path if it's not already
+            if not os.path.isabs(directory):
+                directory = os.path.abspath(directory)
+            config_updates['directory'] = directory
         
         # Update config with new values (deep merge)
         updated_config = deep_update(current_config, config_updates)
@@ -471,7 +501,8 @@ def check_paths():
     
     results = {
         "paths_checked": [],
-        "all_paths_accessible": True
+        "all_paths_accessible": True,
+        "suggestions": []
     }
     
     # Check config directory
@@ -483,8 +514,16 @@ def check_paths():
         "writable": os.access(config_dir, os.W_OK) if config_dir.exists() else False
     }
     results["paths_checked"].append({"config_dir": config_dir_status})
-    if not (config_dir_status["exists"] and config_dir_status["is_dir"] and config_dir_status["writable"]):
+    
+    if not config_dir.exists():
         results["all_paths_accessible"] = False
+        results["suggestions"].append(f"Create the config directory: mkdir -p '{config_dir}'")
+    elif not config_dir_status["is_dir"]:
+        results["all_paths_accessible"] = False
+        results["suggestions"].append(f"'{config_dir}' exists but is not a directory. Remove it and create a directory instead.")
+    elif not config_dir_status["writable"]:
+        results["all_paths_accessible"] = False
+        results["suggestions"].append(f"Make the config directory writable: chmod u+w '{config_dir}'")
     
     # Check config file
     config_file_status = {
@@ -495,8 +534,16 @@ def check_paths():
         "writable": os.access(config_path, os.W_OK) if config_path.exists() else False
     }
     results["paths_checked"].append({"config_file": config_file_status})
-    if config_path.exists() and not (config_file_status["is_file"] and config_file_status["readable"]):
+    
+    if config_path.exists() and not config_file_status["is_file"]:
         results["all_paths_accessible"] = False
+        results["suggestions"].append(f"'{config_path}' exists but is not a file. Remove it and create a file instead.")
+    elif config_path.exists() and not config_file_status["readable"]:
+        results["all_paths_accessible"] = False
+        results["suggestions"].append(f"Make the config file readable: chmod u+r '{config_path}'")
+    elif config_path.exists() and not config_file_status["writable"]:
+        results["all_paths_accessible"] = False
+        results["suggestions"].append(f"Make the config file writable: chmod u+w '{config_path}'")
     
     # Check database file and directory
     db_dir = db_path.parent
@@ -507,8 +554,16 @@ def check_paths():
         "writable": os.access(db_dir, os.W_OK) if db_dir.exists() else False
     }
     results["paths_checked"].append({"db_dir": db_dir_status})
-    if not (db_dir_status["exists"] and db_dir_status["is_dir"] and db_dir_status["writable"]):
+    
+    if not db_dir.exists():
         results["all_paths_accessible"] = False
+        results["suggestions"].append(f"Create the database directory: mkdir -p '{db_dir}'")
+    elif not db_dir_status["is_dir"]:
+        results["all_paths_accessible"] = False
+        results["suggestions"].append(f"'{db_dir}' exists but is not a directory. Remove it and create a directory instead.")
+    elif not db_dir_status["writable"]:
+        results["all_paths_accessible"] = False
+        results["suggestions"].append(f"Make the database directory writable: chmod u+w '{db_dir}'")
     
     # Check library file if it exists
     if db_path.exists():
@@ -520,28 +575,76 @@ def check_paths():
             "writable": os.access(db_path, os.W_OK)
         }
         results["paths_checked"].append({"db_file": db_file_status})
-        if not (db_file_status["is_file"] and db_file_status["readable"] and db_file_status["writable"]):
+        
+        if not db_file_status["is_file"]:
             results["all_paths_accessible"] = False
+            results["suggestions"].append(f"'{db_path}' exists but is not a file. Remove it: rm '{db_path}'")
+        elif not db_file_status["readable"]:
+            results["all_paths_accessible"] = False
+            results["suggestions"].append(f"Make the database file readable: chmod u+r '{db_path}'")
+        elif not db_file_status["writable"]:
+            results["all_paths_accessible"] = False
+            results["suggestions"].append(f"Make the database file writable: chmod u+w '{db_path}'")
     
     # If config exists, check music directories defined in config
+    music_dir_path = None
     if config_path.exists():
         try:
             config = read_beets_config()
             if isinstance(config, dict) and "directory" in config:
-                music_dir = Path(config["directory"])
-                music_dir_status = {
-                    "path": str(music_dir),
-                    "exists": music_dir.exists(),
-                    "is_dir": music_dir.is_dir() if music_dir.exists() else False,
-                    "readable": os.access(music_dir, os.R_OK) if music_dir.exists() else False,
-                    "writable": os.access(music_dir, os.W_OK) if music_dir.exists() else False
-                }
-                results["paths_checked"].append({"music_dir": music_dir_status})
-                if not (music_dir_status["exists"] and music_dir_status["is_dir"] and music_dir_status["readable"]):
+                # Try to expand the music directory path
+                directory_str = config["directory"]
+                
+                # Expand user directory if it starts with ~
+                if isinstance(directory_str, str):
+                    directory_str = os.path.expanduser(directory_str)
+                    
+                    # Convert to absolute path if it's relative
+                    if not os.path.isabs(directory_str):
+                        directory_str = os.path.abspath(directory_str)
+                    
+                    music_dir = Path(directory_str)
+                    music_dir_path = str(music_dir)  # Store for results
+                    
+                    music_dir_status = {
+                        "path": str(music_dir),
+                        "exists": music_dir.exists(),
+                        "is_dir": music_dir.is_dir() if music_dir.exists() else False,
+                        "readable": os.access(music_dir, os.R_OK) if music_dir.exists() else False,
+                        "writable": os.access(music_dir, os.W_OK) if music_dir.exists() else False
+                    }
+                    results["paths_checked"].append({"music_dir": music_dir_status})
+                    
+                    if not music_dir.exists():
+                        results["all_paths_accessible"] = False
+                        results["suggestions"].append(f"Create the music directory: mkdir -p '{music_dir}'")
+                    elif not music_dir_status["is_dir"]:
+                        results["all_paths_accessible"] = False
+                        results["suggestions"].append(f"'{music_dir}' exists but is not a directory. Remove it and create a directory instead.")
+                    elif not music_dir_status["readable"]:
+                        results["all_paths_accessible"] = False
+                        results["suggestions"].append(f"Make the music directory readable: chmod u+r '{music_dir}'")
+                    elif not music_dir_status["writable"]:
+                        results["all_paths_accessible"] = False
+                        results["suggestions"].append(f"Make the music directory writable: chmod u+w '{music_dir}'")
+                else:
                     results["all_paths_accessible"] = False
+                    results["suggestions"].append("The 'directory' setting in your config is not a string. Edit your config.yaml to set a valid music directory path.")
+            else:
+                results["all_paths_accessible"] = False
+                results["suggestions"].append("No 'directory' setting found in the config. Set a music directory in your configuration.")
         except Exception as e:
             logger.error(f"Error checking music directory: {str(e)}")
             results["music_dir_error"] = str(e)
             results["all_paths_accessible"] = False
+            results["suggestions"].append(f"Error checking music directory: {str(e)}")
+    
+    # Add general suggestions if there are problems
+    if not results["all_paths_accessible"]:
+        if not config_path.exists():
+            results["suggestions"].append("Your beets configuration file doesn't exist. Try using the Settings interface to create a basic configuration.")
+        
+        if music_dir_path is None and config_path.exists():
+            results["suggestions"].append("No music directory is configured. Set one in the Settings interface or edit your config.yaml directly.")
     
     return results

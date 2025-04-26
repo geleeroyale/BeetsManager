@@ -498,14 +498,26 @@
 
   // Save beets configuration
   function saveBeetsConfig() {
-    const directory = document.getElementById("config-directory").value;
+    const directory = document.getElementById("config-directory").value.trim();
     const importCopy = document.getElementById("config-import-copy").checked;
     const importMove = document.getElementById("config-import-move").checked;
     const importWrite = document.getElementById("config-import-write").checked;
-    const pathFormat = document.getElementById("config-path-format").value;
+    const pathFormat = document
+      .getElementById("config-path-format")
+      .value.trim();
+
+    // Validate the directory path is not empty
+    if (!directory) {
+      showError(
+        "Music directory cannot be empty. Please specify a valid path."
+      );
+      return;
+    }
 
     // Build config object
     const config = {
+      // Make sure to include the directory exactly as entered by the user
+      // The backend will handle proper path expansion (~ for home directory etc.)
       directory: directory,
       import: {
         copy: importCopy,
@@ -520,6 +532,12 @@
         default: pathFormat,
       };
     }
+
+    // Show a loading indicator
+    const saveBtn = document.getElementById("config-save-btn");
+    const originalBtnHtml = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
+    saveBtn.disabled = true;
 
     // Send updated config
     fetch("/api/beets/config", {
@@ -536,8 +554,18 @@
         return response.json();
       })
       .then((result) => {
+        // Restore button
+        saveBtn.innerHTML = originalBtnHtml;
+        saveBtn.disabled = false;
+
         if (result.success) {
           showSuccess("Configuration updated successfully");
+
+          // Reload all config views to show updated values
+          setTimeout(() => {
+            loadBeetsConfig();
+            loadRawConfig();
+          }, 500);
         } else {
           showError(
             "Failed to update configuration: " +
@@ -546,6 +574,10 @@
         }
       })
       .catch((error) => {
+        // Restore button
+        saveBtn.innerHTML = originalBtnHtml;
+        saveBtn.disabled = false;
+
         console.error("Error saving config:", error);
         showError("Failed to save configuration: " + error.message);
       });
@@ -633,13 +665,63 @@
         return response.json();
       })
       .then((config) => {
-        // Convert to YAML-like string for display
-        let yamlString = "";
-        for (const [key, value] of Object.entries(config)) {
-          yamlString += formatYamlEntry(key, value, 0);
-        }
+        try {
+          // Use a more reliable way to format the config as YAML
+          // Convert the JSON object to YAML-formatted string
+          // This is a simplified version that works better than the previous implementation
+          let yamlString = "";
 
-        document.getElementById("raw-config").value = yamlString;
+          // Handle special cases for directory paths and key formatting
+          for (const key in config) {
+            // Special handling for directory to ensure it's properly displayed
+            if (key === "directory") {
+              yamlString += `directory: "${config[key]}"\n`;
+            }
+            // Format plugins as a list if it's an array
+            else if (key === "plugins" && Array.isArray(config[key])) {
+              yamlString += "plugins:\n";
+              for (const plugin of config[key]) {
+                yamlString += `  - ${plugin}\n`;
+              }
+            }
+            // Format objects (like import settings)
+            else if (typeof config[key] === "object" && config[key] !== null) {
+              yamlString += `${key}:\n`;
+              for (const subKey in config[key]) {
+                const value = config[key][subKey];
+                // Format boolean values properly
+                if (typeof value === "boolean") {
+                  yamlString += `  ${subKey}: ${value}\n`;
+                }
+                // Format nested objects (like paths)
+                else if (typeof value === "object" && value !== null) {
+                  yamlString += `  ${subKey}:\n`;
+                  for (const nestedKey in value) {
+                    yamlString += `    ${nestedKey}: ${value[nestedKey]}\n`;
+                  }
+                }
+                // Format strings with quotes
+                else if (typeof value === "string") {
+                  yamlString += `  ${subKey}: "${value}"\n`;
+                }
+                // Default formatting for other types
+                else {
+                  yamlString += `  ${subKey}: ${value}\n`;
+                }
+              }
+            }
+            // Default handling for simple values
+            else {
+              yamlString += `${key}: ${config[key]}\n`;
+            }
+          }
+
+          document.getElementById("raw-config").value = yamlString;
+        } catch (error) {
+          console.error("Error formatting config as YAML:", error);
+          document.getElementById("raw-config").value =
+            "Error formatting configuration: " + error.message;
+        }
       })
       .catch((error) => {
         console.error("Error loading raw config:", error);
@@ -652,8 +734,7 @@
     const rawText = document.getElementById("raw-config").value;
 
     try {
-      // This is a simplified approach - in a real app, you'd use a proper YAML parser
-      // For now, we'll directly send the text to the backend and let it handle parsing
+      // Send the raw YAML text to the backend
       fetch("/api/beets/config", {
         method: "POST",
         headers: {
@@ -670,9 +751,11 @@
         .then((result) => {
           if (result.success) {
             showSuccess("Configuration updated successfully");
-            // Reload all config views
-            loadBeetsConfig();
-            loadRawConfig();
+            // Reload all config views after a short delay to allow backend processing
+            setTimeout(() => {
+              loadBeetsConfig();
+              loadRawConfig();
+            }, 500);
           } else {
             showError(
               "Failed to update configuration: " +
@@ -685,40 +768,9 @@
           showError("Failed to save configuration: " + error.message);
         });
     } catch (error) {
-      console.error("Error parsing YAML:", error);
-      showError("Invalid YAML format: " + error.message);
+      console.error("Error with YAML:", error);
+      showError("Error processing YAML: " + error.message);
     }
-  }
-
-  // Helper for formatting config object as YAML-like string
-  function formatYamlEntry(key, value, indent = 0) {
-    const indentStr = " ".repeat(indent);
-    let result = "";
-
-    if (value === null || value === undefined) {
-      result = `${indentStr}${key}:\n`;
-    } else if (typeof value === "object" && !Array.isArray(value)) {
-      result = `${indentStr}${key}:\n`;
-      for (const [k, v] of Object.entries(value)) {
-        result += formatYamlEntry(k, v, indent + 2);
-      }
-    } else if (Array.isArray(value)) {
-      result = `${indentStr}${key}:\n`;
-      for (const item of value) {
-        if (typeof item === "object") {
-          result += `${indentStr}- \n`;
-          for (const [k, v] of Object.entries(item)) {
-            result += formatYamlEntry(k, v, indent + 4);
-          }
-        } else {
-          result += `${indentStr}- ${item}\n`;
-        }
-      }
-    } else {
-      result = `${indentStr}${key}: ${value}\n`;
-    }
-
-    return result;
   }
 
   // Show a success notification
@@ -816,6 +868,25 @@
             Some paths are not accessible or properly configured.
           </div>
         `;
+
+          // Display suggestions if available
+          if (result.suggestions && result.suggestions.length > 0) {
+            html += `
+            <div class="card bg-dark border-danger mb-4">
+              <div class="card-header bg-danger text-white">
+                <i class="fas fa-lightbulb me-2"></i>
+                Suggested Fixes
+              </div>
+              <div class="card-body">
+                <ol class="mb-0">
+                  ${result.suggestions
+                    .map((suggestion) => `<li class="mb-2">${suggestion}</li>`)
+                    .join("")}
+                </ol>
+              </div>
+            </div>
+            `;
+          }
         }
 
         html += '<div class="list-group list-group-dark mb-3">';
