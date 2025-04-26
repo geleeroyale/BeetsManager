@@ -37,6 +37,14 @@ RUN pip install --no-cache-dir beets \
     requests_oauthlib \
     musicbrainzngs
 
+# Make sure beets is in PATH
+ENV PATH="/usr/local/bin:${PATH}"
+# For user installs, also add the local bin
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Verify beets is installed correctly and in PATH
+RUN which beet && echo "Beets found at: $(which beet)" && beet --version
+
 # Copy the rest of the application code
 COPY . /app
 
@@ -46,8 +54,8 @@ EXPOSE 8777
 # Define environment variables (can be overridden)
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=8777
+ENV FLASK_RUN_PORT=8000
 # BEETS_CONFIG_PATH, MUSIC_DIR, DOWNLOAD_DIR will be set via docker-compose
 
 # Run app.py when the container launches using gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8777", "main:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "main:app"] 
