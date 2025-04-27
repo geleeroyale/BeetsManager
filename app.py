@@ -6,7 +6,7 @@ from beets_utils import (
     get_album_art, import_music, get_item_count, search_library,
     get_albums, get_artists, check_beets_config, 
     read_beets_config, update_beets_config, get_beets_plugins, get_beets_info,
-    reset_database, check_paths
+    reset_database, check_paths, initialize_database
 )
 
 # Set up logging
@@ -223,6 +223,16 @@ def api_check_paths():
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error checking paths: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/beets/initialize', methods=['POST'])
+def api_initialize_database():
+    """Initialize a new beets database."""
+    try:
+        result = initialize_database()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

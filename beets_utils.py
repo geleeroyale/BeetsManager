@@ -464,10 +464,8 @@ def reset_database():
     try:
         # Check if database exists
         if not db_path.exists():
-            return {
-                "success": False, 
-                "message": f"Database not found at {db_path}. Nothing to reset."
-            }
+            # Just initialize a new database if none exists
+            return initialize_database()
             
         # Create a backup with timestamp
         import datetime
@@ -477,20 +475,109 @@ def reset_database():
         # Move the database file to backup
         shutil.move(str(db_path), str(backup_path))
         
-        # Run beet command to initialize a new database
-        result = subprocess.run([BEET_EXECUTABLE, "version"], capture_output=True, text=True)
+        # Initialize a new database
+        init_result = initialize_database()
         
-        return {
-            "success": True,
-            "message": f"Database reset successfully. Old database backed up to {backup_path}",
-            "backup_path": str(backup_path)
-        }
+        if init_result["success"]:
+            return {
+                "success": True,
+                "message": f"Database reset successfully. Old database backed up to {backup_path}",
+                "backup_path": str(backup_path)
+            }
+        else:
+            # If initialization failed, return the error
+            init_result["backup_path"] = str(backup_path)
+            return init_result
+            
     except Exception as e:
         logger.error(f"Error resetting database: {str(e)}")
         return {
             "success": False,
             "error": str(e),
             "message": "Failed to reset database."
+        }
+
+def initialize_database():
+    """Initialize a new Beets database."""
+    config_path = get_beets_config_path()
+    db_path = get_beets_db_path()
+    
+    try:
+        # Make sure the directory exists
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # First, check if the config file exists
+        if not config_path.exists():
+            # Create a basic config file if it doesn't exist
+            basic_config = {
+                "directory": os.path.expanduser("~/Music"),
+                "library": str(db_path),
+                "import": {
+                    "copy": True,
+                    "write": True
+                }
+            }
+            
+            # Create the directory if it doesn't exist
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write the basic config
+            with open(config_path, 'w') as f:
+                yaml.dump(basic_config, f, default_flow_style=False, sort_keys=False)
+            
+            logger.info(f"Created basic config file at {config_path}")
+        
+        # Run beet command to initialize a new database
+        # The 'version' command is lightweight and will create the DB if it doesn't exist
+        result = subprocess.run([BEET_EXECUTABLE, "version"], capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            # If that failed, try a more explicit initialization with the 'init' command if available
+            try:
+                init_result = subprocess.run([BEET_EXECUTABLE, "init"], capture_output=True, text=True)
+                if init_result.returncode != 0:
+                    return {
+                        "success": False,
+                        "message": f"Failed to initialize database. Error: {init_result.stderr}",
+                        "error": init_result.stderr
+                    }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "message": f"Failed to initialize database. Error: {str(e)}",
+                    "error": str(e)
+                }
+        
+        # Verify the database was created
+        if db_path.exists():
+            return {
+                "success": True,
+                "message": "Database initialized successfully",
+                "db_path": str(db_path)
+            }
+        else:
+            # Run the 'list' command which will definitely create the DB
+            list_result = subprocess.run([BEET_EXECUTABLE, "list"], capture_output=True, text=True)
+            
+            if db_path.exists():
+                return {
+                    "success": True,
+                    "message": "Database initialized successfully (using list command)",
+                    "db_path": str(db_path)
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "Failed to initialize database. Database file not created.",
+                    "error": "Database file not created after initialization attempts"
+                }
+    
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Failed to initialize database."
         }
 
 def check_paths():

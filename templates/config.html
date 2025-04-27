@@ -315,9 +315,16 @@
                 operation cannot be undone.
               </div>
               <div id="reset-result" class="mb-3" style="display: none"></div>
-              <div class="d-grid gap-2 d-md-block">
-                <button type="button" id="reset-db-btn" class="btn btn-danger">
+              <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <button
+                  type="button"
+                  id="reset-db-btn"
+                  class="btn btn-danger me-2"
+                >
                   <i class="fas fa-trash-alt me-1"></i> Reset Database
+                </button>
+                <button type="button" id="init-db-btn" class="btn btn-primary">
+                  <i class="fas fa-database me-1"></i> Initialize Database
                 </button>
               </div>
             </div>
@@ -435,6 +442,19 @@
           )
         ) {
           resetDatabase();
+        }
+      });
+
+    // Set up database initialization button
+    document
+      .getElementById("init-db-btn")
+      .addEventListener("click", function () {
+        if (
+          confirm(
+            "Initialize a new database? This will create the database file if it doesn't exist."
+          )
+        ) {
+          initializeDatabase();
         }
       });
 
@@ -827,6 +847,67 @@
       .catch((error) => {
         console.error("Error resetting database:", error);
         const resetResult = document.getElementById("reset-result");
+        resetResult.style.display = "block";
+        resetResult.innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-times-circle me-2"></i>
+          Error: ${error.message || "Unknown error occurred"}
+        </div>
+      `;
+      });
+  }
+
+  // Initialize database function
+  function initializeDatabase() {
+    const resetResult = document.getElementById("reset-result");
+    resetResult.style.display = "block";
+    resetResult.innerHTML = `
+      <div class="alert alert-info">
+        <i class="fas fa-spinner fa-spin me-2"></i>
+        Initializing database...
+      </div>
+    `;
+
+    fetch("/api/beets/initialize", {
+      method: "POST",
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        resetResult.style.display = "block";
+
+        if (result.success) {
+          resetResult.innerHTML = `
+          <div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>
+            ${result.message}
+            ${
+              result.db_path
+                ? `<div class="mt-2 small">Database created at: ${result.db_path}</div>`
+                : ""
+            }
+          </div>
+        `;
+        } else {
+          resetResult.innerHTML = `
+          <div class="alert alert-danger">
+            <i class="fas fa-times-circle me-2"></i>
+            ${result.message || "Failed to initialize database"}
+            ${
+              result.error
+                ? `<div class="mt-2 small text-warning">${result.error}</div>`
+                : ""
+            }
+          </div>
+        `;
+        }
+
+        // After initializing, check the paths again to update the status
+        setTimeout(() => {
+          checkPaths();
+        }, 500);
+      })
+      .catch((error) => {
+        console.error("Error initializing database:", error);
         resetResult.style.display = "block";
         resetResult.innerHTML = `
         <div class="alert alert-danger">
