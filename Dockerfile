@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     mp3gain \
     libchromaprint-dev \
+    gosu \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -58,6 +59,9 @@ EXPOSE 8000
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=8000
+# User/group IDs - defaults to 1000:1000 (typical first user on Linux systems)
+ENV PUID=1000
+ENV PGID=1000
 # BEETS_CONFIG_PATH, MUSIC_DIR, DOWNLOAD_DIR will be set via docker-compose
 
 # Use our entrypoint script

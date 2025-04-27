@@ -511,7 +511,7 @@ def initialize_database():
             # Create a basic config file if it doesn't exist
             basic_config = {
                 "directory": os.path.expanduser("~/Music"),
-                "library": str(db_path),
+                "library": str(db_path),  # Ensure library is a string
                 "import": {
                     "copy": True,
                     "write": True
@@ -526,12 +526,67 @@ def initialize_database():
                 yaml.dump(basic_config, f, default_flow_style=False, sort_keys=False)
             
             logger.info(f"Created basic config file at {config_path}")
+        else:
+            # Check and fix the existing config if necessary
+            try:
+                with open(config_path, 'r') as f:
+                    existing_config = yaml.safe_load(f) or {}
+                
+                # Check if the library setting is properly formatted
+                if "library" in existing_config and not isinstance(existing_config["library"], str):
+                    # Fix the library setting to be a string
+                    existing_config["library"] = str(db_path)
+                    # Write the corrected config back
+                    with open(config_path, 'w') as f:
+                        yaml.dump(existing_config, f, default_flow_style=False, sort_keys=False)
+                    logger.info(f"Fixed library setting in config file at {config_path}")
+                
+                # Ensure library is defined
+                if "library" not in existing_config:
+                    existing_config["library"] = str(db_path)
+                    # Write the updated config back
+                    with open(config_path, 'w') as f:
+                        yaml.dump(existing_config, f, default_flow_style=False, sort_keys=False)
+                    logger.info(f"Added missing library setting to config file at {config_path}")
+            except Exception as e:
+                logger.error(f"Error checking/fixing existing config: {str(e)}")
+                # If we can't fix the existing config, try to create a backup and create a new one
+                try:
+                    # Create backup of problematic config
+                    import datetime
+                    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    backup_path = config_path.with_name(f"config_backup_{timestamp}.yaml")
+                    shutil.copy(str(config_path), str(backup_path))
+                    
+                    # Create a new basic config
+                    basic_config = {
+                        "directory": os.path.expanduser("~/Music"),
+                        "library": str(db_path),
+                        "import": {
+                            "copy": True,
+                            "write": True
+                        }
+                    }
+                    
+                    # Write the new config
+                    with open(config_path, 'w') as f:
+                        yaml.dump(basic_config, f, default_flow_style=False, sort_keys=False)
+                    
+                    logger.info(f"Created new config file at {config_path} (backup at {backup_path})")
+                except Exception as backup_error:
+                    logger.error(f"Error creating backup/new config: {str(backup_error)}")
+                    return {
+                        "success": False,
+                        "message": f"Failed to fix config file. Please check the format manually.",
+                        "error": f"Original error: {str(e)}. Backup error: {str(backup_error)}"
+                    }
         
         # Run beet command to initialize a new database
         # The 'version' command is lightweight and will create the DB if it doesn't exist
         result = subprocess.run([BEET_EXECUTABLE, "version"], capture_output=True, text=True)
         
         if result.returncode != 0:
+            logger.error(f"Error initializing database with 'version' command: {result.stderr}")
             # If that failed, try a more explicit initialization with the 'init' command if available
             try:
                 init_result = subprocess.run([BEET_EXECUTABLE, "init"], capture_output=True, text=True)
@@ -556,20 +611,59 @@ def initialize_database():
                 "db_path": str(db_path)
             }
         else:
-            # Run the 'list' command which will definitely create the DB
-            list_result = subprocess.run([BEET_EXECUTABLE, "list"], capture_output=True, text=True)
-            
-            if db_path.exists():
-                return {
-                    "success": True,
-                    "message": "Database initialized successfully (using list command)",
-                    "db_path": str(db_path)
-                }
-            else:
+            # As a last resort, try to manually create the database structure
+            try:
+                # Run the 'list' command which will definitely create the DB
+                list_result = subprocess.run([BEET_EXECUTABLE, "list"], capture_output=True, text=True)
+                
+                if db_path.exists():
+                    return {
+                        "success": True,
+                        "message": "Database initialized successfully (using list command)",
+                        "db_path": str(db_path)
+                    }
+                else:
+                    # Create a minimal empty SQLite database manually
+                    conn = sqlite3.connect(db_path)
+                    # Create base tables
+                    conn.execute('''
+                    CREATE TABLE IF NOT EXISTS items (
+                        id INTEGER PRIMARY KEY,
+                        path TEXT,
+                        album_id INTEGER,
+                        title TEXT,
+                        artist TEXT,
+                        album TEXT,
+                        year INTEGER,
+                        month INTEGER,
+                        day INTEGER
+                    )
+                    ''')
+                    conn.execute('''
+                    CREATE TABLE IF NOT EXISTS albums (
+                        id INTEGER PRIMARY KEY,
+                        artpath TEXT,
+                        albumartist TEXT,
+                        album TEXT,
+                        year INTEGER,
+                        month INTEGER,
+                        day INTEGER
+                    )
+                    ''')
+                    conn.commit()
+                    conn.close()
+                    
+                    return {
+                        "success": True,
+                        "message": "Database initialized successfully (created manually)",
+                        "db_path": str(db_path)
+                    }
+            except Exception as e:
+                logger.error(f"Error manually creating database: {str(e)}")
                 return {
                     "success": False,
                     "message": "Failed to initialize database. Database file not created.",
-                    "error": "Database file not created after initialization attempts"
+                    "error": f"Database file not created after all initialization attempts. Error: {str(e)}"
                 }
     
     except Exception as e:

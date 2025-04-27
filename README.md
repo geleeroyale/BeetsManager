@@ -54,6 +54,18 @@ This application is designed to be run using Docker and Docker Compose. A GitHub
     IMAGE_TAG=latest
     # -------------------------------
 
+    # --- File Permissions (for mounted volumes) ---
+    # Set the User ID (UID) that will own files created by the container
+    # This should match your host user's UID to avoid permission issues
+    # Run 'id -u' on your host to find this value
+    PUID=1000
+
+    # Set the Group ID (GID) that will own files created by the container
+    # This should match your host user's GID to avoid permission issues
+    # Run 'id -g' on your host to find this value
+    PGID=1000
+    # -------------------------------
+
     # --- IMPORTANT: Host Path Configuration ---
     # Set the absolute path to the directory containing your beets config.yaml and library.db on your HOST machine
     BEETS_CONFIG_DIR_HOST=/path/on/your/host/to/beets-config
@@ -148,6 +160,8 @@ A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) is configured
 - **`GH_USERNAME`**: Your GitHub username (or organization) for the GHCR image path.
 - **`GH_REPONAME`**: Your GitHub repository name for the GHCR image path.
 - **`IMAGE_TAG`**: The tag of the GHCR image to pull (e.g., `latest`, `main`, `sha-xxxxx`, `v1.0`).
+- **`PUID`**: Process User ID - the user ID that will own files created by the container. Set to your host user's UID for proper permissions.
+- **`PGID`**: Process Group ID - the group ID that will own files created by the container. Set to your host user's GID for proper permissions.
 - **`BEETS_CONFIG_DIR_HOST`**: _Host path_ to the directory containing `config.yaml` and `library.db`. Mounted to `/root/.config/beets`.
 - **`MUSIC_DIR_HOST`**: _Host path_ to your music library. Mounted to `/music`.
 - **`DOWNLOAD_DIR_HOST`**: _Host path_ to your downloads directory. Mounted to `/downloads`.
@@ -155,6 +169,37 @@ A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) is configured
 - **`SESSION_SECRET`**: Secret key for Flask sessions. **Change this!**
 - **`BEETS_CONFIG_PATH`**: (Container Env Var) Tells the app where to find the config file _inside_ the container (`/root/.config/beets/config.yaml`).
 - **`MUSIC_DIRECTORY_CONTAINER` / `DOWNLOAD_DIRECTORY_CONTAINER`**: (Container Env Vars) Set to `/music` and `/downloads`. Crucial for Beets config.
+
+## Handling Permissions
+
+### Understanding PUID and PGID
+
+When Docker containers access files on mounted volumes, they need appropriate permissions. The `PUID` and `PGID` environment variables ensure that the container process runs with the correct user/group IDs matching your host system:
+
+1. **Why this matters**: Without matching IDs, you may encounter permission issues where:
+
+   - The container can't read your music files
+   - Files created by the container are owned by root or an unknown user
+   - You can't modify imported files from your host system
+
+2. **Finding your user ID and group ID**:
+   Run these commands on your host system:
+
+   ```bash
+   # Find your user ID (PUID)
+   id -u
+
+   # Find your group ID (PGID)
+   id -g
+   ```
+
+3. **Setting the values**:
+
+   - Add these values to your `.env` file
+   - Restart the container: `docker-compose down && docker-compose up -d`
+
+4. **Verifying permissions**:
+   After restarting, check the logs with `docker-compose logs` to confirm the container is running with the correct UID/GID.
 
 ## Contributing
 

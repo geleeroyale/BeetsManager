@@ -12,6 +12,10 @@ services:
       - ${MUSIC_DIR_HOST:-./music}:/music
       - ${DOWNLOAD_DIR_HOST:-./downloads}:/downloads
     environment:
+      # User/group IDs for file permissions
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      # Beets configuration
       - BEETS_CONFIG_PATH=/root/.config/beets/config.yaml
       - MUSIC_DIRECTORY_CONTAINER=/music
       - DOWNLOAD_DIRECTORY_CONTAINER=/downloads
