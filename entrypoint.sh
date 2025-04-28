@@ -10,6 +10,9 @@ PUID=${PUID:-1000}
 PGID=${PGID:-1000}
 USER=${USER:-beets}
 
+# Define the container config path
+CONTAINER_CONFIG_DIR="/config"
+
 echo "=== User/Group Information ==="
 echo "User ID (PUID): $PUID"
 echo "Group ID (PGID): $PGID"
@@ -35,22 +38,21 @@ id $(getent passwd $PUID | cut -d: -f1)
 # Create or update ownership of key directories
 # Only do this if we're running as root
 if [ "$(id -u)" = "0" ]; then
-    # Config directory
-    if [ -d "/root/.config/beets" ]; then
-        chown -R $PUID:$PGID /root/.config/beets
-        echo "Updated ownership of beets config directory"
-    fi
+    # Create the config directory if it doesn't exist
+    mkdir -p $CONTAINER_CONFIG_DIR
+    chown $PUID:$PGID $CONTAINER_CONFIG_DIR
+    echo "Ensured config directory $CONTAINER_CONFIG_DIR exists and is owned by $PUID:$PGID"
     
     # Music directory - check if it's mounted
     if [ -d "/music" ]; then
         chown -R $PUID:$PGID /music
-        echo "Updated ownership of music directory"
+        echo "Updated ownership of music directory /music to $PUID:$PGID"
     fi
     
     # Downloads directory - check if it's mounted
     if [ -d "/downloads" ]; then
         chown -R $PUID:$PGID /downloads
-        echo "Updated ownership of downloads directory"
+        echo "Updated ownership of downloads directory /downloads to $PUID:$PGID"
     fi
 fi
 

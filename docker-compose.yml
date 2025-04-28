@@ -8,7 +8,7 @@ services:
     ports:
       - "${APP_PORT:-5000}:8000"
     volumes:
-      - ${BEETS_CONFIG_DIR_HOST:-./config}:/root/.config/beets
+      - ${BEETS_CONFIG_DIR_HOST:-./config}:/config
       - ${MUSIC_DIR_HOST:-./music}:/music
       - ${DOWNLOAD_DIR_HOST:-./downloads}:/downloads
     environment:
@@ -16,7 +16,7 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       # Beets configuration
-      - BEETS_CONFIG_PATH=/root/.config/beets/config.yaml
+      - BEETS_CONFIG_PATH=/config/config.yaml
       - MUSIC_DIRECTORY_CONTAINER=/music
       - DOWNLOAD_DIRECTORY_CONTAINER=/downloads
       - FLASK_DEBUG=${FLASK_DEBUG:-0}

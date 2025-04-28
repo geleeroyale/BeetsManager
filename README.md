@@ -92,6 +92,7 @@ This application is designed to be run using Docker and Docker Compose. A GitHub
 
     - Music Library Directory: `/music`
     - Any paths related to importing/downloads (if configured in Beets): `/downloads`
+    - **Important**: If you specify a custom `library` path in your config, make sure it points to a location _inside_ the `/config` directory, e.g., `/config/my_library.db`.
 
     Example `config.yaml` snippet:
 
@@ -162,12 +163,12 @@ A GitHub Actions workflow (`.github/workflows/docker-publish.yml`) is configured
 - **`IMAGE_TAG`**: The tag of the GHCR image to pull (e.g., `latest`, `main`, `sha-xxxxx`, `v1.0`).
 - **`PUID`**: Process User ID - the user ID that will own files created by the container. Set to your host user's UID for proper permissions.
 - **`PGID`**: Process Group ID - the group ID that will own files created by the container. Set to your host user's GID for proper permissions.
-- **`BEETS_CONFIG_DIR_HOST`**: _Host path_ to the directory containing `config.yaml` and `library.db`. Mounted to `/root/.config/beets`.
+- **`BEETS_CONFIG_DIR_HOST`**: _Host path_ to the directory containing `config.yaml` and `library.db`. Mounted to `/config` inside the container.
 - **`MUSIC_DIR_HOST`**: _Host path_ to your music library. Mounted to `/music`.
 - **`DOWNLOAD_DIR_HOST`**: _Host path_ to your downloads directory. Mounted to `/downloads`.
 - **`FLASK_DEBUG`**: Enables/disables Flask's debug mode in the container.
 - **`SESSION_SECRET`**: Secret key for Flask sessions. **Change this!**
-- **`BEETS_CONFIG_PATH`**: (Container Env Var) Tells the app where to find the config file _inside_ the container (`/root/.config/beets/config.yaml`).
+- **`BEETS_CONFIG_PATH`**: (Container Env Var) Tells the app where to find the config file _inside_ the container (defaults to `/config/config.yaml`).
 - **`MUSIC_DIRECTORY_CONTAINER` / `DOWNLOAD_DIRECTORY_CONTAINER`**: (Container Env Vars) Set to `/music` and `/downloads`. Crucial for Beets config.
 
 ## Handling Permissions

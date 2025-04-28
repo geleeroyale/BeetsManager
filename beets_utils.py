@@ -33,25 +33,41 @@ else:
 
 # Define default paths relative to home if env vars are not set
 DEFAULT_BEETS_CONFIG_DIR = Path(os.path.expanduser("~")) / ".config" / "beets"
-DEFAULT_CONFIG_PATH = DEFAULT_BEETS_CONFIG_DIR / "config.yaml"
+DEFAULT_CONFIG_PATH = Path("/config/config.yaml")
 DEFAULT_DB_PATH = DEFAULT_BEETS_CONFIG_DIR / "library.db"
 
 def get_beets_config_path():
     """Get the path to the beets config file, prioritizing ENV."""
-    return Path(os.environ.get("BEETS_CONFIG_PATH", DEFAULT_CONFIG_PATH))
+    config_path_str = os.environ.get("BEETS_CONFIG_PATH", str(DEFAULT_CONFIG_PATH))
+    return Path(config_path_str)
 
 def get_beets_db_path():
-    """Get the path to the beets database, derived from config path or ENV."""
-    # If BEETS_CONFIG_PATH is set, assume db is in the same directory
-    config_path_str = os.environ.get("BEETS_CONFIG_PATH")
-    if config_path_str:
-        config_path = Path(config_path_str)
-        # Assume library.db is in the same directory as config.yaml
-        # This might need adjustment if user has a non-standard setup
-        return config_path.parent / "library.db" 
-    else:
-        # Fallback to default if env var is not set
-        return DEFAULT_DB_PATH
+    """Get the path to the beets database, derived from config file setting or default.
+    
+    Reads the config file to find the 'library' setting.
+    If not found or config doesn't exist, defaults to a path adjacent to the config file.
+    """
+    config_path = get_beets_config_path()
+    default_db_path = config_path.parent / "library.db"
+    
+    try:
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                config_data = yaml.safe_load(f)
+            
+            if isinstance(config_data, dict) and "library" in config_data:
+                library_path_str = config_data["library"]
+                # Make sure the library path from config is absolute
+                library_path = Path(library_path_str)
+                if not library_path.is_absolute():
+                    # Assume it's relative to the config directory
+                    library_path = config_path.parent / library_path
+                return library_path
+    except Exception as e:
+        logger.error(f"Error reading library path from config: {e}. Using default.")
+    
+    # Fallback to default path if config doesn't exist, can't be read, or lacks 'library' key
+    return default_db_path
 
 def check_beets_config():
     """Check if beets is configured correctly."""
@@ -504,22 +520,20 @@ def initialize_database():
     
     try:
         # Make sure the directory exists
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.parent.mkdir(parents=True, exist_ok=True) # Ensure config dir exists
+        db_path.parent.mkdir(parents=True, exist_ok=True) # Ensure db dir exists (might be same)
         
         # First, check if the config file exists
         if not config_path.exists():
             # Create a basic config file if it doesn't exist
             basic_config = {
-                "directory": os.path.expanduser("~/Music"),
+                "directory": os.environ.get("MUSIC_DIRECTORY_CONTAINER", "/music"), # Get from env if possible
                 "library": str(db_path),  # Ensure library is a string
                 "import": {
                     "copy": True,
                     "write": True
                 }
             }
-            
-            # Create the directory if it doesn't exist
-            config_path.parent.mkdir(parents=True, exist_ok=True)
             
             # Write the basic config
             with open(config_path, 'w') as f:
@@ -532,22 +546,28 @@ def initialize_database():
                 with open(config_path, 'r') as f:
                     existing_config = yaml.safe_load(f) or {}
                 
+                needs_update = False
                 # Check if the library setting is properly formatted
                 if "library" in existing_config and not isinstance(existing_config["library"], str):
-                    # Fix the library setting to be a string
                     existing_config["library"] = str(db_path)
-                    # Write the corrected config back
-                    with open(config_path, 'w') as f:
-                        yaml.dump(existing_config, f, default_flow_style=False, sort_keys=False)
+                    needs_update = True
                     logger.info(f"Fixed library setting in config file at {config_path}")
                 
                 # Ensure library is defined
                 if "library" not in existing_config:
                     existing_config["library"] = str(db_path)
-                    # Write the updated config back
+                    needs_update = True
+                    logger.info(f"Added missing library setting to config file at {config_path}")
+                
+                # Ensure directory is defined
+                if "directory" not in existing_config:
+                     existing_config["directory"] = os.environ.get("MUSIC_DIRECTORY_CONTAINER", "/music")
+                     needs_update = True
+                     logger.info(f"Added missing directory setting to config file at {config_path}")
+                
+                if needs_update:
                     with open(config_path, 'w') as f:
                         yaml.dump(existing_config, f, default_flow_style=False, sort_keys=False)
-                    logger.info(f"Added missing library setting to config file at {config_path}")
             except Exception as e:
                 logger.error(f"Error checking/fixing existing config: {str(e)}")
                 # If we can't fix the existing config, try to create a backup and create a new one
@@ -560,7 +580,7 @@ def initialize_database():
                     
                     # Create a new basic config
                     basic_config = {
-                        "directory": os.path.expanduser("~/Music"),
+                        "directory": os.environ.get("MUSIC_DIRECTORY_CONTAINER", "/music"),
                         "library": str(db_path),
                         "import": {
                             "copy": True,
